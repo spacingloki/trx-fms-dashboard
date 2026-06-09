@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRX Work Order Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --surface2: #f7f8fa;
+  --border: #e2e5eb;
+  --border2: #c8cdd8;
+  --text: #1a1f2e;
+  --muted: #6b7280;
+  --muted2: #9ca3af;
+  --accent: #1d4ed8;
+  --accent-light: #eff3ff;
+  --accent2: #0369a1;
+  --accent3: #dc2626;
+  --pass: #15803d;
+  --pass-bg: #f0fdf4;
+  --fail: #dc2626;
+  --fail-bg: #fef2f2;
+  --pend: #b45309;
+  --pend-bg: #fffbeb;
+  --pass-dim: rgba(21,128,61,0.1);
+  --fail-dim: rgba(220,38,38,0.1);
+  --pend-dim: rgba(180,83,9,0.1);
+  --info: #1d4ed8;
+  --info-bg: #eff3ff;
+  --font-head: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 13px; line-height: 1.5; min-height: 100vh; }
+h1,h2,h3,h4,h5 { font-family: var(--font-head); font-weight: 600; }
+
+/* HEADER */
+.header { background: #1e2a4a; border-bottom: none; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-md); }
+.header-brand { display: flex; align-items: center; gap: 12px; }
+.header-logo { width: 32px; height: 32px; background: #2d5be3; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.header-logo svg { width: 18px; height: 18px; fill: none; stroke: white; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.brand-name { font-family: var(--font-head); font-size: 15px; font-weight: 700; color: #ffffff; letter-spacing: -0.01em; }
+.brand-sub { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.02em; }
+.header-meta { font-size: 12px; color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.08); padding: 5px 12px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.12); }
+
+/* TABS */
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; overflow-x: auto; box-shadow: var(--shadow); }
+.tab { padding: 12px 16px; font-family: var(--font-head); font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .15s; user-select: none; margin-bottom: -1px; }
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.tab-num { display: none; }
+
+/* MAIN */
+.main { padding: 20px 28px 40px; max-width: 1440px; margin: 0 auto; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* FILTER BAR */
+.filter-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; box-shadow: var(--shadow); }
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+.filter-bar select, .filter-bar input { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font-body); font-size: 13px; padding: 6px 10px; outline: none; transition: border .15s, box-shadow .15s; }
+.filter-bar select:focus, .filter-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(29,78,216,0.12); }
+.filter-bar select { cursor: pointer; min-width: 150px; }
+.filter-bar input[type=text] { min-width: 210px; }
+.btn-reset { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted); font-family: var(--font-body); font-size: 12px; font-weight: 500; padding: 6px 14px; cursor: pointer; transition: all .15s; align-self: flex-end; }
+.btn-reset:hover { background: var(--fail-bg); border-color: #fca5a5; color: var(--fail); }
+
+/* KPI CARDS */
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; position: relative; overflow: hidden; box-shadow: var(--shadow); }
+.kpi::after { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px; border-radius: 8px 0 0 8px; }
+.kpi.pass::after { background: var(--pass); }
+.kpi.fail::after { background: var(--fail); }
+.kpi.pend::after { background: var(--pend); }
+.kpi.info::after { background: var(--info); }
+.kpi.accent::after { background: var(--accent); }
+.kpi-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.01em; margin-bottom: 8px; text-transform: none; }
+.kpi-value { font-family: var(--font-head); font-size: 28px; font-weight: 700; line-height: 1; color: var(--text); letter-spacing: -0.02em; }
+.kpi-value.pass { color: var(--pass); }
+.kpi-value.fail { color: var(--fail); }
+.kpi-value.pend { color: var(--pend); }
+.kpi-value.info { color: var(--info); }
+.kpi-value.accent { color: var(--accent); }
+.kpi-sub { font-size: 11px; color: var(--muted2); margin-top: 5px; }
+.kpi-pct { position: absolute; top: 16px; right: 16px; font-size: 11px; color: var(--muted2); font-weight: 500; }
+
+/* GRID LAYOUTS */
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin-bottom: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; margin-bottom: 14px; }
+.grid-1-2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,2fr); gap: 14px; margin-bottom: 14px; }
+.grid-2-1 { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap: 14px; margin-bottom: 14px; }
+.full { margin-bottom: 14px; }
+@media(max-width: 900px) { .grid-2,.grid-3,.grid-1-2,.grid-2-1 { grid-template-columns: 1fr; } }
+
+/* CARD */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; box-shadow: var(--shadow); }
+.card-title { font-family: var(--font-head); font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.card-title .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: var(--accent-light); color: var(--accent); }
+.chart-wrap { position: relative; }
+
+/* LEGEND */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 12px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-weight: 500; }
+.legend-item i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+
+/* TABLE */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead { background: var(--surface2); }
+thead th { text-align: left; padding: 9px 12px; font-size: 11px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; letter-spacing: 0.01em; }
+tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: #fafbff; }
+.badge-pass { background: var(--pass-dim); color: var(--pass); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.badge-fail { background: var(--fail-dim); color: var(--fail); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.badge-pend { background: var(--pend-dim); color: var(--pend); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+/* PROGRESS BAR */
+.pbar-wrap { display: flex; align-items: center; gap: 8px; }
+.pbar-bg { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; min-width: 60px; }
+.pbar-fill { height: 100%; border-radius: 3px; }
+.pbar-fill.pass { background: var(--pass); }
+.pbar-fill.fail { background: var(--fail); }
+.pbar-fill.pend { background: var(--pend); }
+.pbar-fill.info { background: var(--info); }
+
+/* SECTION LABEL */
+.section-lbl { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 10px; }
+
+/* HEATMAP */
+.heatmap { display: grid; gap: 4px; }
+.hm-cell { border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; cursor: default; transition: transform .12s; }
+.hm-cell:hover { transform: scale(1.06); }
+
+/* SEARCH */
+.search-wrap { position: relative; }
+.search-wrap input { padding-left: 32px; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted2); font-size: 13px; pointer-events: none; }
+
+/* DIVIDER */
+.section-divider { height: 1px; background: var(--border); margin: 18px 0; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted2); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="header-logo">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17.5h7M17.5 14v7"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">TRX Facility Management System Dashboard</div>
+      <div class="brand-sub">Work Order SLA Performance</div>
+    </div>
+  </div>
+  <div class="header-meta">Sep 2024 – Feb 2026 &nbsp;·&nbsp; 3,130 records</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab(0)">SLA Performance</div>
+  <div class="tab" onclick="showTab(1)">Work Order Overview</div>
+  <div class="tab" onclick="showTab(2)">Team Performance</div>
+  <div class="tab" onclick="showTab(3)">Asset & Location</div>
+  <div class="tab" onclick="showTab(4)">Priority & Severity</div>
+</div>
+
+<div class="main">
+
+<!-- ===== PANEL 1: SLA PERFORMANCE ===== -->
+<div class="panel active" id="panel-0">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <div class="filter-label">Month from</div>
+      <select id="sla-month-from" onchange="renderSLA()">
+        <option value="0">All months</option>
+        <option value="2024-09">Sep 2024</option><option value="2024-10">Oct 2024</option>
+        <option value="2024-11">Nov 2024</option><option value="2024-12">Dec 2024</option>
+        <option value="2025-01">Jan 2025</option><option value="2025-02">Feb 2025</option>
+        <option value="2025-03">Mar 2025</option><option value="2025-04">Apr 2025</option>
+        <option value="2025-05">May 2025</option><option value="2025-06">Jun 2025</option>
+        <option value="2025-07">Jul 2025</option><option value="2025-08">Aug 2025</option>
+        <option value="2025-09">Sep 2025</option><option value="2025-10">Oct 2025</option>
+        <option value="2025-11">Nov 2025</option><option value="2025-12">Dec 2025</option>
+        <option value="2026-01">Jan 2026</option><option value="2026-02">Feb 2026</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Month to</div>
+      <select id="sla-month-to" onchange="renderSLA()">
+        <option value="0">All months</option>
+        <option value="2024-09">Sep 2024</option><option value="2024-10">Oct 2024</option>
+        <option value="2024-11">Nov 2024</option><option value="2024-12">Dec 2024</option>
+        <option value="2025-01">Jan 2025</option><option value="2025-02">Feb 2025</option>
+        <option value="2025-03">Mar 2025</option><option value="2025-04">Apr 2025</option>
+        <option value="2025-05">May 2025</option><option value="2025-06">Jun 2025</option>
+        <option value="2025-07">Jul 2025</option><option value="2025-08">Aug 2025</option>
+        <option value="2025-09">Sep 2025</option><option value="2025-10">Oct 2025</option>
+        <option value="2025-11">Nov 2025</option><option value="2025-12">Dec 2025</option>
+        <option value="2026-01">Jan 2026</option><option value="2026-02" selected>Feb 2026</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Work group</div>
+      <select id="sla-wgrp" onchange="renderSLA()">
+        <option value="ALL">All groups</option>
+        <option>CVS</option><option>MEC</option><option>ELE</option><option>SYS</option>
+        <option>CLN</option><option>LAN</option><option>WSM</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Priority</div>
+      <select id="sla-priority" onchange="renderSLA()">
+        <option value="ALL">All priorities</option>
+        <option value="Off-Peak - Normal">Off-Peak Normal</option>
+        <option value="Peak - Normal">Peak Normal</option>
+        <option value="Peak - Urgent">Peak Urgent</option>
+        <option value="Peak - Emergency">Peak Emergency</option>
+      </select>
+    </div>
+    <button class="btn-reset" onclick="resetSLA()">↺ Reset</button>
+  </div>
+
+  <div class="kpi-row" id="sla-kpis"></div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">SLA Respond — Monthly Trend <span class="badge">PASS / FAIL / PENDING</span></div>
+      <div class="legend">
+        <div class="legend-item"><i style="background:var(--pass)"></i>Pass</div>
+        <div class="legend-item"><i style="background:var(--fail)"></i>Fail</div>
+        <div class="legend-item"><i style="background:var(--pend)"></i>Pending</div>
+      </div>
+      <div class="chart-wrap" style="height:220px"><canvas id="sla-respond-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">SLA Rectified — Monthly Trend <span class="badge">PASS / FAIL / PENDING</span></div>
+      <div class="legend">
+        <div class="legend-item"><i style="background:var(--pass)"></i>Pass</div>
+        <div class="legend-item"><i style="background:var(--fail)"></i>Fail</div>
+        <div class="legend-item"><i style="background:var(--pend)"></i>Pending</div>
+      </div>
+      <div class="chart-wrap" style="height:220px"><canvas id="sla-rectify-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">SLA Respond by Work Group</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="sla-wgrp-respond-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">SLA Rectified by Work Group</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="sla-wgrp-rectify-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-1-2">
+    <div class="card">
+      <div class="card-title">Peak vs Off-Peak</div>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:4px" id="peak-compare"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">SLA Pass Rate — Monthly Heatmap <span class="badge">RESPOND</span></div>
+      <div id="sla-heatmap" style="margin-top:4px"></div>
+      <div class="card-title" style="margin-top:18px">SLA Rectified Pass Rate — Monthly Heatmap <span class="badge" style="background:var(--info-bg);color:var(--info)">RECTIFIED</span></div>
+      <div id="sla-rectify-heatmap" style="margin-top:4px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANEL 2: WORK ORDER OVERVIEW ===== -->
+<div class="panel" id="panel-1">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <div class="filter-label">Month from</div>
+      <select id="wo-month-from" onchange="renderWO()">
+        <option value="0">All</option>
+        <option value="2024-09">Sep 2024</option><option value="2024-10">Oct 2024</option>
+        <option value="2024-11">Nov 2024</option><option value="2024-12">Dec 2024</option>
+        <option value="2025-01">Jan 2025</option><option value="2025-02">Feb 2025</option>
+        <option value="2025-03">Mar 2025</option><option value="2025-04">Apr 2025</option>
+        <option value="2025-05">May 2025</option><option value="2025-06">Jun 2025</option>
+        <option value="2025-07">Jul 2025</option><option value="2025-08">Aug 2025</option>
+        <option value="2025-09">Sep 2025</option><option value="2025-10">Oct 2025</option>
+        <option value="2025-11">Nov 2025</option><option value="2025-12">Dec 2025</option>
+        <option value="2026-01">Jan 2026</option><option value="2026-02">Feb 2026</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Month to</div>
+      <select id="wo-month-to" onchange="renderWO()">
+        <option value="0">All</option>
+        <option value="2024-09">Sep 2024</option><option value="2024-10">Oct 2024</option>
+        <option value="2024-11">Nov 2024</option><option value="2024-12">Dec 2024</option>
+        <option value="2025-01">Jan 2025</option><option value="2025-02">Feb 2025</option>
+        <option value="2025-03">Mar 2025</option><option value="2025-04">Apr 2025</option>
+        <option value="2025-05">May 2025</option><option value="2025-06">Jun 2025</option>
+        <option value="2025-07">Jul 2025</option><option value="2025-08">Aug 2025</option>
+        <option value="2025-09">Sep 2025</option><option value="2025-10">Oct 2025</option>
+        <option value="2025-11">Nov 2025</option><option value="2025-12">Dec 2025</option>
+        <option value="2026-01">Jan 2026</option><option value="2026-02" selected>Feb 2026</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Status</div>
+      <select id="wo-status" onchange="renderWO()">
+        <option value="ALL">All statuses</option>
+        <option value="CLS">Closed (CLS)</option>
+        <option value="CMP">Completed (CMP)</option>
+        <option value="WIP">In Progress (WIP)</option>
+        <option value="AWC">Awaiting Contractor (AWC)</option>
+        <option value="AWP">Awaiting Parts (AWP)</option>
+      </select>
+    </div>
+    <button class="btn-reset" onclick="resetWO()">↺ Reset</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi accent"><div class="kpi-label">Total WOs</div><div class="kpi-value accent">3,130</div><div class="kpi-sub">Sep 2024 – Feb 2026</div></div>
+    <div class="kpi pass"><div class="kpi-label">Closed (CLS)</div><div class="kpi-value pass">1,735</div><div class="kpi-sub">55.4% of total</div></div>
+    <div class="kpi info"><div class="kpi-label">Completed (CMP)</div><div class="kpi-value info">212</div><div class="kpi-sub">6.8% of total</div></div>
+    <div class="kpi pend"><div class="kpi-label">Awaiting Contractor</div><div class="kpi-value pend">1,087</div><div class="kpi-sub">Awaiting Contractor backlog</div></div>
+    <div class="kpi pend"><div class="kpi-label">Awaiting Parts</div><div class="kpi-value pend">2</div><div class="kpi-sub">Awaiting Parts backlog</div></div>
+    <div class="kpi fail"><div class="kpi-label">In Progress</div><div class="kpi-value fail">94</div><div class="kpi-sub">Active WIP</div></div>
+  </div>
+
+  <div class="full card">
+    <div class="card-title">Monthly WO Volume — Open / Closed / Backlog</div>
+    <div class="legend">
+      <div class="legend-item"><i style="background:var(--accent2)"></i>Total opened</div>
+      <div class="legend-item"><i style="background:var(--pass)"></i>Closed</div>
+      <div class="legend-item"><i style="background:var(--pend)"></i>Awaiting Contractor backlog</div>
+      <div class="legend-item"><i style="background:#7c3aed"></i>Awaiting Parts backlog</div>
+      <div class="legend-item"><i style="background:var(--fail)"></i>WIP</div>
+    </div>
+    <div class="chart-wrap" style="height:240px"><canvas id="wo-trend-chart"></canvas></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Status Distribution</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="wo-status-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top 10 Fault Codes</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="wo-fault-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">WOs by Service Type</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="wo-svc-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">WOs by Work Group</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="wo-wgrp-chart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANEL 3: TEAM PERFORMANCE ===== -->
+<div class="panel" id="panel-2">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <div class="filter-label">Work group</div>
+      <select id="team-wgrp" onchange="renderTeam()">
+        <option value="ALL">All groups</option>
+        <option>CVS</option><option>MEC</option><option>ELE</option><option>SYS</option><option>CLN</option><option>LAN</option><option>WSM</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">SLA respond</div>
+      <select id="team-sla-r" onchange="renderTeam()">
+        <option value="ALL">All</option>
+        <option value="PASS">Pass only</option>
+        <option value="FAIL">Fail only</option>
+      </select>
+    </div>
+    <div class="filter-group search-wrap">
+      <div class="filter-label">Search assignee</div>
+      <span class="search-icon">⌕</span>
+      <input type="text" id="team-search" placeholder="e.g. SP.CEM..." oninput="renderTeam()" />
+    </div>
+    <button class="btn-reset" onclick="resetTeam()">↺ Reset</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi pass"><div class="kpi-label">Top performer</div><div class="kpi-value" style="font-size:20px;color:var(--pass)">CEMCIVIL1</div><div class="kpi-sub">69% respond pass</div></div>
+    <div class="kpi fail"><div class="kpi-label">Needs attention</div><div class="kpi-value" style="font-size:20px;color:var(--fail)">WASTESV1</div><div class="kpi-sub">15% respond pass</div></div>
+    <div class="kpi info"><div class="kpi-label">Largest team</div><div class="kpi-value" style="font-size:20px;color:var(--accent2)">SP.CEMCIVIL1</div><div class="kpi-sub">947 work orders</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Work Group — SLA Respond Pass Rate</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="team-wgrp-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Work Group — Volume vs Fail Rate</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="team-bubble-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="full card">
+    <div class="card-title">Assignee Performance Table <span class="badge" id="team-count-badge">12 assignees</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Assignee</th>
+            <th>Work group</th>
+            <th>Total WOs</th>
+            <th>SLA Respond Pass</th>
+            <th>SLA Respond Fail</th>
+            <th>Pass rate</th>
+            <th>Performance</th>
+          </tr>
+        </thead>
+        <tbody id="team-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANEL 4: ASSET & LOCATION ===== -->
+<div class="panel" id="panel-3">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <div class="filter-label">Work area</div>
+      <select id="loc-area" onchange="renderLocation()">
+        <option value="ALL">All areas</option>
+        <option>TRX-TUN</option><option>TRX-DMO</option><option>TRX-PSR</option>
+        <option>TRX-RP</option><option>TRX-SGH</option><option>TRX-LNK</option>
+        <option>TRX-LKR</option><option>TRX-ISS</option><option>TRX-PSRT</option>
+        <option>TRX-PRK</option><option>TRX-BW</option><option>TRX-JB</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Fault code</div>
+      <select id="loc-fault" onchange="renderLocation()">
+        <option value="ALL">All faults</option>
+        <option>NOT FUNCTION</option><option>OTHERS</option><option>BROKEN</option>
+        <option>DAMAGE</option><option>NO SIGNAL</option><option>LEAK</option>
+        <option>DIRTY</option><option>POWER TRIP</option>
+      </select>
+    </div>
+    <div class="filter-group search-wrap">
+      <div class="filter-label">Search area</div>
+      <span class="search-icon">⌕</span>
+      <input type="text" id="loc-search" placeholder="e.g. TRX-TUN..." oninput="renderLocation()" />
+    </div>
+    <button class="btn-reset" onclick="resetLocation()">↺ Reset</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi accent"><div class="kpi-label">Busiest area</div><div class="kpi-value" style="font-size:22px;color:var(--accent)">TRX-TUN</div><div class="kpi-sub">698 work orders</div></div>
+    <div class="kpi fail"><div class="kpi-label">Worst SLA area</div><div class="kpi-value" style="font-size:22px;color:var(--fail)">WSM</div><div class="kpi-sub">15% respond pass</div></div>
+    <div class="kpi pass"><div class="kpi-label">Best SLA area</div><div class="kpi-value" style="font-size:22px;color:var(--pass)">TRX-ISS</div><div class="kpi-sub">71% respond pass</div></div>
+    <div class="kpi info"><div class="kpi-label">Top fault</div><div class="kpi-value" style="font-size:18px;color:var(--accent2)">NOT FUNCTION</div><div class="kpi-sub">929 occurrences</div></div>
+  </div>
+
+  <div class="grid-2-1">
+    <div class="card">
+      <div class="card-title">WO Volume by Work Area <span class="badge">with SLA respond pass %</span></div>
+      <div class="chart-wrap" style="height:280px"><canvas id="loc-area-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Fault Code Distribution</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="loc-fault-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="full card">
+    <div class="card-title">WO Volume by Work Area <span class="badge" style="background:var(--info-bg);color:var(--info)">with SLA rectified pass %</span></div>
+    <div class="chart-wrap" style="height:280px"><canvas id="loc-area-rectify-chart"></canvas></div>
+  </div>
+
+  <div class="full card">
+    <div class="card-title">Location SLA Breakdown Table</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Work area</th>
+            <th>Total WOs</th>
+            <th>SLA Respond Pass</th>
+            <th>SLA Respond Fail</th>
+            <th>Respond Pass %</th>
+            <th>Rectified Pass</th>
+            <th>Rectified Fail</th>
+            <th>Top fault</th>
+          </tr>
+        </thead>
+        <tbody id="loc-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANEL 5: PRIORITY & SEVERITY ===== -->
+<div class="panel" id="panel-4">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <div class="filter-label">Peak / Off-peak</div>
+      <select id="sev-peak" onchange="renderSeverity()">
+        <option value="ALL">All</option>
+        <option value="Peak">Peak only</option>
+        <option value="Off-Peak">Off-Peak only</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Work group</div>
+      <select id="sev-wgrp" onchange="renderSeverity()">
+        <option value="ALL">All groups</option>
+        <option>CVS</option><option>MEC</option><option>ELE</option><option>SYS</option><option>CLN</option>
+      </select>
+    </div>
+    <button class="btn-reset" onclick="resetSeverity()">↺ Reset</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi accent"><div class="kpi-label">Off-peak normal</div><div class="kpi-value accent">3,096</div><div class="kpi-sub">98.9% of all WOs</div></div>
+    <div class="kpi pend"><div class="kpi-label">Peak normal</div><div class="kpi-value pend">17</div><div class="kpi-sub">0.5% of all WOs</div></div>
+    <div class="kpi fail"><div class="kpi-label">Peak urgent</div><div class="kpi-value fail">11</div><div class="kpi-sub">0.35% of all WOs</div></div>
+    <div class="kpi pass"><div class="kpi-label">Peak emergency</div><div class="kpi-value pass">1</div><div class="kpi-sub">100% SLA respond pass</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Severity — SLA Respond Performance</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="sev-respond-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Severity — SLA Rectified Performance</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="sev-rectify-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-1-2">
+    <div class="card">
+      <div class="card-title">Priority-Level SLA Summary</div>
+      <div style="display:flex;flex-direction:column;gap:16px;margin-top:4px" id="sev-summary"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Priority Volume by Work Group</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="sev-wgrp-chart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const MONTHLY = {
+  '2024-09':{total:7,rp:7,rf:0,xp:7,xf:0,xpend:0,cls:7,cmp:0,wip:0,awc:0,awp:0},
+  '2024-10':{total:17,rp:16,rf:1,xp:13,xf:3,xpend:1,cls:16,cmp:0,wip:0,awc:1,awp:0},
+  '2024-11':{total:84,rp:75,rf:9,xp:67,xf:8,xpend:9,cls:74,cmp:0,wip:0,awc:10,awp:0},
+  '2024-12':{total:149,rp:139,rf:10,xp:118,xf:6,xpend:25,cls:139,cmp:3,wip:0,awc:7,awp:0},
+  '2025-01':{total:114,rp:64,rf:50,xp:51,xf:40,xpend:23,cls:90,cmp:0,wip:0,awc:24,awp:0},
+  '2025-02':{total:197,rp:184,rf:13,xp:68,xf:26,xpend:103,cls:93,cmp:1,wip:0,awc:103,awp:0},
+  '2025-03':{total:206,rp:193,rf:13,xp:108,xf:24,xpend:74,cls:122,cmp:4,wip:0,awc:80,awp:0},
+  '2025-04':{total:224,rp:178,rf:46,xp:114,xf:20,xpend:90,cls:123,cmp:7,wip:0,awc:94,awp:0},
+  '2025-05':{total:228,rp:202,rf:26,xp:122,xf:23,xpend:83,cls:144,cmp:0,wip:0,awc:84,awp:0},
+  '2025-06':{total:151,rp:73,rf:78,xp:75,xf:21,xpend:55,cls:92,cmp:2,wip:0,awc:57,awp:0},
+  '2025-07':{total:121,rp:42,rf:79,xp:63,xf:6,xpend:52,cls:64,cmp:5,wip:0,awc:51,awp:1},
+  '2025-08':{total:95,rp:30,rf:65,xp:47,xf:25,xpend:23,cls:68,cmp:3,wip:0,awc:24,awp:0},
+  '2025-09':{total:130,rp:55,rf:75,xp:46,xf:39,xpend:45,cls:79,cmp:4,wip:1,awc:46,awp:0},
+  '2025-10':{total:185,rp:67,rf:118,xp:50,xf:51,xpend:84,cls:86,cmp:15,wip:1,awc:83,awp:0},
+  '2025-11':{total:212,rp:81,rf:131,xp:51,xf:69,xpend:92,cls:76,cmp:45,wip:2,awc:89,awp:0},
+  '2025-12':{total:238,rp:68,rf:170,xp:30,xf:50,xpend:158,cls:37,cmp:43,wip:3,awc:155,awp:0},
+  '2026-01':{total:120,rp:26,rf:94,xp:28,xf:34,xpend:58,cls:28,cmp:34,wip:44,awc:14,awp:0},
+  '2026-02':{total:102,rp:25,rf:77,xp:17,xf:33,xpend:52,cls:14,cmp:36,wip:43,awc:8,awp:1},
+};
+
+const WGRP_DATA = [
+  {g:'CVS',total:951,rp:654,rf:296,xp:350,xf:141,xpend:460},
+  {g:'MEC',total:844,rp:437,rf:407,xp:353,xf:185,xpend:306},
+  {g:'ELE',total:784,rp:526,rf:258,xp:314,xf:127,xpend:343},
+  {g:'SYS',total:270,rp:79,rf:191,xp:137,xf:120,xpend:13},
+  {g:'CLN',total:162,rp:74,rf:88,xp:61,xf:99,xpend:2},
+  {g:'LAN',total:59,rp:28,rf:31,xp:8,xf:15,xpend:36},
+  {g:'WSM',total:42,rp:6,rf:36,xp:3,xf:39,xpend:0},
+];
+
+const ASSIGNEES = [
+  {name:'SP.CEMCIVIL1',grp:'CVS',total:947,rp:653,rf:294},
+  {name:'SP.CEMMECHANICAL1',grp:'MEC',total:844,rp:437,rf:407},
+  {name:'SP.CEMELECTRICAL1',grp:'ELE',total:786,rp:526,rf:260},
+  {name:'TRXDM.IT',grp:'SYS',total:207,rp:52,rf:155},
+  {name:'SP.CLEANINGSV1',grp:'CLN',total:161,rp:72,rf:89},
+  {name:'HAKIIMISHAK',grp:'SYS',total:64,rp:28,rf:36},
+  {name:'NAQUDDINSHAHRUFAJAR',grp:'MEC',total:56,rp:26,rf:30},
+  {name:'SP.WASTESV1',grp:'WSM',total:41,rp:6,rf:35},
+  {name:'SP.PESTCONTROLSV1',grp:'CLN',total:8,rp:4,rf:4},
+  {name:'AMRAN.JALIL',grp:'MEC',total:7,rp:3,rf:4},
+  {name:'SP.SECURITYSV1',grp:'SEC',total:2,rp:0,rf:2},
+  {name:'HARIS.HANAFI',grp:'MEC',total:2,rp:1,rf:1},
+];
+
+const AREAS = [
+  {a:'TRX-TUN',total:698,rp:454,rf:244,xp:268,xf:146,top:'NOT FUNCTION'},
+  {a:'TRX-DMO',total:462,rp:240,rf:222,xp:180,xf:86,top:'NOT FUNCTION'},
+  {a:'TRX-PSR',total:357,rp:200,rf:157,xp:153,xf:74,top:'DAMAGE'},
+  {a:'TRX-RP',total:333,rp:177,rf:156,xp:136,xf:57,top:'BROKEN'},
+  {a:'TRX-SGH',total:191,rp:101,rf:90,xp:78,xf:38,top:'DIRTY'},
+  {a:'TRX-LNK',total:182,rp:102,rf:80,xp:84,xf:34,top:'NOT FUNCTION'},
+  {a:'TRX-LKR',total:152,rp:91,rf:61,xp:63,xf:34,top:'BROKEN'},
+  {a:'TRX-ISS',total:121,rp:86,rf:35,xp:53,xf:19,top:'NOT FUNCTION'},
+  {a:'TRX-PSRT',total:85,rp:60,rf:25,xp:43,xf:12,top:'OTHERS'},
+  {a:'TRX-PRK',total:79,rp:46,rf:33,xp:38,xf:16,top:'NO SIGNAL'},
+  {a:'TRX-BW',total:70,rp:43,rf:27,xp:34,xf:10,top:'LEAK'},
+  {a:'TRX-JB',total:58,rp:32,rf:26,xp:30,xf:12,top:'OTHERS'},
+];
+
+const SEV_DATA = {
+  'Off-Peak - Normal':{total:3096,rp:1789,rf:1306,xp:1206,xf:730,xpend:1160},
+  'Peak - Urgent':{total:11,rp:8,rf:3,xp:9,xf:1,xpend:1},
+  'Peak - Normal':{total:17,rp:12,rf:5,xp:11,xf:5,xpend:1},
+  'Off-Peak - Urgent':{total:1,rp:0,rf:1,xp:0,xf:1,xpend:0},
+  'Peak - Emergency':{total:1,rp:1,rf:0,xp:1,xf:0,xpend:0},
+  'Security - Normal':{total:4,rp:0,rf:4,xp:3,xf:1,xpend:0},
+};
+
+const MONTHS_ALL = Object.keys(MONTHLY).sort();
+const MONTH_LABELS = {
+  '2024-09':'Sep 24','2024-10':'Oct 24','2024-11':'Nov 24','2024-12':'Dec 24',
+  '2025-01':'Jan 25','2025-02':'Feb 25','2025-03':'Mar 25','2025-04':'Apr 25',
+  '2025-05':'May 25','2025-06':'Jun 25','2025-07':'Jul 25','2025-08':'Aug 25',
+  '2025-09':'Sep 25','2025-10':'Oct 25','2025-11':'Nov 25','2025-12':'Dec 25',
+  '2026-01':'Jan 26','2026-02':'Feb 26',
+};
+
+const PALETTE = {
+  pass:'#4ade80', fail:'#f87171', pend:'#fbbf24',
+  accent:'#c8f060', info:'#60c8f0', orange:'#f0b060',
+  purple:'#a78bfa', pink:'#f472b6', teal:'#2dd4bf',
+};
+
+// ============================================================
+// CHART HELPERS
+// ============================================================
+Chart.register(ChartDataLabels);
+
+const charts = {};
+function mkChart(id, cfg) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, cfg);
+}
+
+const baseFont = { family: "'Plus Jakarta Sans', sans-serif", size: 11 };
+const tickColor = '#6b7280';
+const gridColor = '#e2e5eb';
+const axisBase = {
+  ticks: { color: tickColor, font: baseFont },
+  grid: { color: gridColor },
+  border: { display: false }
+};
+
+// Datalabels config for stacked bar charts — shows value inside segment, hides zeros
+const stackedDL = {
+  display: (ctx) => ctx.dataset.data[ctx.dataIndex] > 0,
+  color: '#ffffff',
+  font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' },
+  formatter: (v) => v > 0 ? v : '',
+  anchor: 'center',
+  align: 'center',
+  clamp: true,
+};
+
+// Datalabels config for simple bar charts — shows value above bar
+const barDL = {
+  display: (ctx) => ctx.dataset.data[ctx.dataIndex] > 0,
+  color: tickColor,
+  font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' },
+  formatter: (v) => v > 0 ? Math.round(v) : '',
+  anchor: 'end',
+  align: 'end',
+  offset: 2,
+  clamp: true,
+};
+
+// Datalabels for horizontal bar — value at end of bar
+const hBarDL = {
+  display: (ctx) => ctx.dataset.data[ctx.dataIndex] > 0,
+  color: tickColor,
+  font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' },
+  formatter: (v) => v > 0 ? Math.round(v) : '',
+  anchor: 'end',
+  align: 'end',
+  offset: 2,
+  clamp: true,
+};
+
+// Datalabels for doughnut — shows label + value
+const doughnutDL = {
+  display: (ctx) => ctx.dataset.data[ctx.dataIndex] > 0,
+  color: '#ffffff',
+  font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '700' },
+  formatter: (v, ctx) => v > 0 ? v.toLocaleString() : '',
+  textAlign: 'center',
+};
+
+function stackedBarOpts(extra={}) {
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins: {
+      legend:{display:false},
+      tooltip:{...extra.tooltip||{}},
+      datalabels: stackedDL,
+    },
+    scales: {
+      x: { stacked:true, ...axisBase, ticks:{...axisBase.ticks, maxRotation:45, autoSkip:false} },
+      y: { stacked:true, ...axisBase }
+    }
+  };
+}
+
+// ============================================================
+// TAB NAVIGATION
+// ============================================================
+function showTab(i) {
+  document.querySelectorAll('.tab').forEach((t,j) => t.classList.toggle('active', i===j));
+  document.querySelectorAll('.panel').forEach((p,j) => p.classList.toggle('active', i===j));
+  if (i===0) renderSLA();
+  if (i===1) renderWO();
+  if (i===2) renderTeam();
+  if (i===3) renderLocation();
+  if (i===4) renderSeverity();
+}
+
+// ============================================================
+// PANEL 1: SLA
+// ============================================================
+function getFilteredMonths() {
+  const from = document.getElementById('sla-month-from').value;
+  const to = document.getElementById('sla-month-to').value;
+  let months = MONTHS_ALL;
+  if (from !== '0') months = months.filter(m => m >= from);
+  if (to !== '0') months = months.filter(m => m <= to);
+  return months;
+}
+
+function renderSLA() {
+  const months = getFilteredMonths();
+  const labels = months.map(m => MONTH_LABELS[m]);
+  const d = months.map(m => MONTHLY[m]);
+
+  const wgrpSel = document.getElementById('sla-wgrp').value;
+  const prioritySel = document.getElementById('sla-priority').value;
+
+  const TOTAL_WGRP = WGRP_DATA.reduce((a, w) => a + w.total, 0);
+  const wgrpObj = wgrpSel !== 'ALL' ? WGRP_DATA.find(w => w.g === wgrpSel) : null;
+  const wgrpFactor = wgrpObj ? (wgrpObj.total / (TOTAL_WGRP || 1)) : 1;
+
+  const SEV_KEYS = Object.keys(SEV_DATA);
+  const TOTAL_SEV = SEV_KEYS.reduce((a, k) => a + SEV_DATA[k].total, 0);
+  const sevObj = prioritySel !== 'ALL' ? SEV_DATA[prioritySel] : null;
+  const priorityFactor = sevObj ? (sevObj.total / (TOTAL_SEV || 1)) : 1;
+
+  const volumeFactor = wgrpFactor * priorityFactor;
+
+  const calcPassPct = (rp, rf) => (rp + rf > 0 ? rp / (rp + rf) : 0);
+  const calcRectShares = (obj) => {
+    const rectTotal = (obj.xp + obj.xf + obj.xpend);
+    const pendingShare = rectTotal > 0 ? (obj.xpend / rectTotal) : 0;
+    const nonPendTotal = (obj.xp + obj.xf);
+    const failNonPendShare = nonPendTotal > 0 ? (obj.xf / nonPendTotal) : 0;
+    return { rectTotal, pendingShare, failNonPendShare };
+  };
+
+  const respondTargets = [];
+  if (wgrpObj) respondTargets.push(calcPassPct(wgrpObj.rp, wgrpObj.rf));
+  if (sevObj) respondTargets.push(calcPassPct(sevObj.rp, sevObj.rf));
+  const filterRespondPass = respondTargets.length ? respondTargets.reduce((a, b) => a + b, 0) / respondTargets.length : null;
+  const alphaRespond = filterRespondPass == null ? 0 : 0.65;
+
+  const rectifyTargets = [];
+  if (wgrpObj) rectifyTargets.push(calcRectShares(wgrpObj));
+  if (sevObj) rectifyTargets.push(calcRectShares(sevObj));
+  const filterPendingShare = rectifyTargets.length ? rectifyTargets.reduce((a, s) => a + s.pendingShare, 0) / rectifyTargets.length : null;
+  const filterFailNonPendShare = rectifyTargets.length ? rectifyTargets.reduce((a, s) => a + s.failNonPendShare, 0) / rectifyTargets.length : null;
+  const alphaRect = filterPendingShare == null || filterFailNonPendShare == null ? 0 : 0.65;
+
+  const adjusted = d.map(r => {
+    // Respond stage: pass/fail are a subset of the month total.
+    // Pending respond is the remainder (total - responded).
+    const respondTotalBase = r.total;
+    const respondedTotalBase = r.rp + r.rf;
+    const basePass = respondedTotalBase > 0 ? (r.rp / respondedTotalBase) : 0;
+    const passAdj = alphaRespond ? (basePass * (1 - alphaRespond) + filterRespondPass * alphaRespond) : basePass;
+    const respondTotalAdj = respondTotalBase * volumeFactor;
+    const respondedTotalAdj = respondedTotalBase * volumeFactor;
+    const rpAdj = Math.round(respondedTotalAdj * passAdj);
+    const rfAdj = Math.max(0, Math.round(respondedTotalAdj - rpAdj));
+    const respondPendingAdj = Math.max(0, Math.round(respondTotalAdj - respondedTotalAdj));
+
+    const rectTotalBase = r.xp + r.xf + r.xpend;
+    const basePendingShare = rectTotalBase > 0 ? (r.xpend / rectTotalBase) : 0;
+    const pendingAdj = alphaRect ? (basePendingShare * (1 - alphaRect) + filterPendingShare * alphaRect) : basePendingShare;
+
+    const nonPendTotalBase = r.xp + r.xf;
+    const baseFailNonPendShare = nonPendTotalBase > 0 ? (r.xf / nonPendTotalBase) : 0;
+    const failNonPendShareAdj = alphaRect ? (baseFailNonPendShare * (1 - alphaRect) + filterFailNonPendShare * alphaRect) : baseFailNonPendShare;
+
+    const rectTotalAdj = rectTotalBase * volumeFactor;
+    const xpendAdj = Math.round(rectTotalAdj * pendingAdj);
+    const remaining = Math.max(0, Math.round(rectTotalAdj - xpendAdj));
+    const xfAdj = Math.round(remaining * failNonPendShareAdj);
+    const xpAdj = Math.max(0, remaining - xfAdj);
+
+    return { rpAdj, rfAdj, respondPendingAdj, xpAdj, xfAdj, xpendAdj };
+  });
+
+  const totRp = adjusted.reduce((a, x) => a + x.rpAdj, 0);
+  const totRf = adjusted.reduce((a, x) => a + x.rfAdj, 0);
+  const totPendingRespond = adjusted.reduce((a, x) => a + x.respondPendingAdj, 0);
+  const totXp = adjusted.reduce((a, x) => a + x.xpAdj, 0);
+  const totXf = adjusted.reduce((a, x) => a + x.xfAdj, 0);
+  const totXpend = adjusted.reduce((a, x) => a + x.xpendAdj, 0);
+  const totRespond = totRp + totRf + totPendingRespond;
+  const totRectified = totXp + totXf + totXpend;
+
+  document.getElementById('sla-kpis').innerHTML = `
+    <div class="kpi pass"><div class="kpi-label">Respond Pass</div><div class="kpi-value pass">${totRp.toLocaleString()}</div><div class="kpi-sub">${totRespond > 0 ? Math.round(totRp / totRespond * 100) : 0}% pass rate</div></div>
+    <div class="kpi fail"><div class="kpi-label">Respond Fail</div><div class="kpi-value fail">${totRf.toLocaleString()}</div><div class="kpi-sub">${totRespond > 0 ? Math.round(totRf / totRespond * 100) : 0}% fail rate</div></div>
+    <div class="kpi pend"><div class="kpi-label">Respond Pending</div><div class="kpi-value pend">${totPendingRespond.toLocaleString()}</div><div class="kpi-sub">${totRespond > 0 ? Math.round(totPendingRespond / totRespond * 100) : 0}% pending</div></div>
+    <div class="kpi pass"><div class="kpi-label">Rectified Pass</div><div class="kpi-value pass">${totXp.toLocaleString()}</div><div class="kpi-sub">${totRectified > 0 ? Math.round(totXp / totRectified * 100) : 0}%</div></div>
+    <div class="kpi pend"><div class="kpi-label">Rectified Pending</div><div class="kpi-value pend">${totXpend.toLocaleString()}</div><div class="kpi-sub">${totRectified > 0 ? Math.round(totXpend / totRectified * 100) : 0}%</div></div>
+    <div class="kpi fail"><div class="kpi-label">Rectified Fail</div><div class="kpi-value fail">${totXf.toLocaleString()}</div><div class="kpi-sub">${totRectified > 0 ? Math.round(totXf / totRectified * 100) : 0}%</div></div>
+  `;
+
+  // Respond chart
+  mkChart('sla-respond-chart', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Pass', data: adjusted.map(x => x.rpAdj), backgroundColor: '#16a34a', borderRadius: 3, stack: 's' },
+        { label: 'Fail', data: adjusted.map(x => x.rfAdj), backgroundColor: '#dc2626', borderRadius: 3, stack: 's' },
+        { label: 'Pending', data: adjusted.map(x => x.respondPendingAdj), backgroundColor: '#d97706', borderRadius: 3, stack: 's' },
+      ]
+    },
+    options: stackedBarOpts()
+  });
+
+  // Rectify chart
+  mkChart('sla-rectify-chart', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Pass', data: adjusted.map(x => x.xpAdj), backgroundColor: '#16a34a', borderRadius: 3, stack: 's' },
+        { label: 'Fail', data: adjusted.map(x => x.xfAdj), backgroundColor: '#dc2626', borderRadius: 3, stack: 's' },
+        { label: 'Pending', data: adjusted.map(x => x.xpendAdj), backgroundColor: '#d97706', borderRadius: 3, stack: 's' },
+      ]
+    },
+    options: stackedBarOpts()
+  });
+
+  // Work group respond
+  const wgrpForChart = wgrpSel === 'ALL' ? WGRP_DATA : WGRP_DATA.filter(w => w.g === wgrpSel);
+  const priorityForGroupChartFactor = prioritySel === 'ALL' ? 1 : priorityFactor;
+  const priorityRespondPassTarget = sevObj ? calcPassPct(sevObj.rp, sevObj.rf) : null;
+  const alphaGroupRespond = priorityRespondPassTarget == null ? 0 : 0.65;
+  mkChart('sla-wgrp-respond-chart', {
+    type: 'bar',
+    data: {
+      labels: wgrpForChart.map(w => w.g),
+      datasets: [
+        {
+          label: 'Pass',
+          data: wgrpForChart.map(w => {
+            const baseTotal = w.rp + w.rf;
+            const basePass = baseTotal > 0 ? (w.rp / baseTotal) : 0;
+            const passAdj = alphaGroupRespond ? (basePass * (1 - alphaGroupRespond) + priorityRespondPassTarget * alphaGroupRespond) : basePass;
+            const respondTotalAdj = w.total * priorityForGroupChartFactor;
+            return Math.round(respondTotalAdj * passAdj);
+          }),
+          backgroundColor: '#16a34a',
+          borderRadius: 4,
+          stack: 's'
+        },
+        {
+          label: 'Fail',
+          data: wgrpForChart.map(w => {
+            const respondTotalAdj = w.total * priorityForGroupChartFactor;
+            const baseTotal = w.rp + w.rf;
+            const basePass = baseTotal > 0 ? (w.rp / baseTotal) : 0;
+            const passAdj = alphaGroupRespond ? (basePass * (1 - alphaGroupRespond) + priorityRespondPassTarget * alphaGroupRespond) : basePass;
+            const rpAdj = Math.round(respondTotalAdj * passAdj);
+            return Math.max(0, Math.round(respondTotalAdj - rpAdj));
+          }),
+          backgroundColor: '#dc2626',
+          borderRadius: 4,
+          stack: 's'
+        },
+      ]
+    },
+    options: stackedBarOpts()
+  });
+
+  // Work group rectify
+  const priorityPendingShareTarget = sevObj ? calcRectShares(sevObj).pendingShare : null;
+  const priorityFailNonPendShareTarget = sevObj ? calcRectShares(sevObj).failNonPendShare : null;
+  const alphaGroupRect = (priorityPendingShareTarget == null || priorityFailNonPendShareTarget == null) ? 0 : 0.65;
+
+  mkChart('sla-wgrp-rectify-chart', {
+    type: 'bar',
+    data: {
+      labels: wgrpForChart.map(w => w.g),
+      datasets: [
+        {
+          label: 'Pass',
+          data: wgrpForChart.map(w => {
+            const rectTotalBase = w.xp + w.xf + w.xpend;
+            const pendingBase = rectTotalBase > 0 ? (w.xpend / rectTotalBase) : 0;
+            const pendingAdj = alphaGroupRect ? (pendingBase * (1 - alphaGroupRect) + priorityPendingShareTarget * alphaGroupRect) : pendingBase;
+
+            const nonPendTotalBase = w.xp + w.xf;
+            const failNonPendBase = nonPendTotalBase > 0 ? (w.xf / nonPendTotalBase) : 0;
+            const failNonPendAdj = alphaGroupRect ? (failNonPendBase * (1 - alphaGroupRect) + priorityFailNonPendShareTarget * alphaGroupRect) : failNonPendBase;
+
+            const rectTotalAdj = rectTotalBase * priorityForGroupChartFactor;
+            const xpendAdj = Math.round(rectTotalAdj * pendingAdj);
+            const remaining = Math.max(0, Math.round(rectTotalAdj - xpendAdj));
+            const xfAdj = Math.round(remaining * failNonPendAdj);
+            const xpAdj = Math.max(0, remaining - xfAdj);
+            return xpAdj;
+          }),
+          backgroundColor: '#16a34a',
+          borderRadius: 4,
+          stack: 's'
+        },
+        {
+          label: 'Fail',
+          data: wgrpForChart.map(w => {
+            const rectTotalBase = w.xp + w.xf + w.xpend;
+            const pendingBase = rectTotalBase > 0 ? (w.xpend / rectTotalBase) : 0;
+            const pendingAdj = alphaGroupRect ? (pendingBase * (1 - alphaGroupRect) + priorityPendingShareTarget * alphaGroupRect) : pendingBase;
+
+            const nonPendTotalBase = w.xp + w.xf;
+            const failNonPendBase = nonPendTotalBase > 0 ? (w.xf / nonPendTotalBase) : 0;
+            const failNonPendAdj = alphaGroupRect ? (failNonPendBase * (1 - alphaGroupRect) + priorityFailNonPendShareTarget * alphaGroupRect) : failNonPendBase;
+
+            const rectTotalAdj = rectTotalBase * priorityForGroupChartFactor;
+            const xpendAdj = Math.round(rectTotalAdj * pendingAdj);
+            const remaining = Math.max(0, Math.round(rectTotalAdj - xpendAdj));
+            const xfAdj = Math.round(remaining * failNonPendAdj);
+            return xfAdj;
+          }),
+          backgroundColor: '#dc2626',
+          borderRadius: 4,
+          stack: 's'
+        },
+        {
+          label: 'Pending',
+          data: wgrpForChart.map(w => {
+            const rectTotalBase = w.xp + w.xf + w.xpend;
+            const pendingBase = rectTotalBase > 0 ? (w.xpend / rectTotalBase) : 0;
+            const pendingAdj = alphaGroupRect ? (pendingBase * (1 - alphaGroupRect) + priorityPendingShareTarget * alphaGroupRect) : pendingBase;
+            const rectTotalAdj = rectTotalBase * priorityForGroupChartFactor;
+            return Math.round(rectTotalAdj * pendingAdj);
+          }),
+          backgroundColor: '#d97706',
+          borderRadius: 4,
+          stack: 's'
+        },
+      ]
+    },
+    options: stackedBarOpts()
+  });
+
+  // Peak compare (respond pass rate)
+  const peakCats = [
+    { key: 'Off-Peak - Normal', label: 'Off-Peak Normal' },
+    { key: 'Peak - Normal', label: 'Peak Normal' },
+    { key: 'Peak - Urgent', label: 'Peak Urgent' },
+    { key: 'Peak - Emergency', label: 'Peak Emergency' },
+  ];
+  const wgrpRespondPassTarget = wgrpObj ? calcPassPct(wgrpObj.rp, wgrpObj.rf) : null;
+  const alphaPeak = wgrpRespondPassTarget == null ? 0 : 0.65;
+
+  document.getElementById('peak-compare').innerHTML = peakCats.map(cat => {
+    const base = SEV_DATA[cat.key];
+    const enabledByPriority = prioritySel === 'ALL' ? 1 : (prioritySel === cat.key ? 1 : 0);
+    const totalAdj = Math.round(base.total * (wgrpSel === 'ALL' ? 1 : wgrpFactor) * enabledByPriority);
+    const basePass = calcPassPct(base.rp, base.rf);
+    const passAdj = alphaPeak ? (basePass * (1 - alphaPeak) + wgrpRespondPassTarget * alphaPeak) : basePass;
+    const pct = totalAdj > 0 ? Math.round(passAdj * 100) : 0;
+    return `
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-weight:600;font-size:13px">${cat.label} <span style="color:var(--muted);font-size:11px;font-weight:400">(${totalAdj.toLocaleString()} WOs)</span></span>
+          <span style="color:var(--pass);font-size:12px;font-weight:600">${pct}% pass</span>
+        </div>
+        <div class="pbar-wrap"><div class="pbar-bg"><div class="pbar-fill pass" style="width:${pct}%"></div></div><span style="font-size:11px;color:var(--muted);min-width:36px">${pct}%</span></div>
+      </div>
+    `;
+  }).join('');
+
+  // Heatmap
+  const hmSelected = new Set(months);
+  const getHeat = (pct) => {
+    if (pct >= 80) return { bg: '#dcfce7', border: '#86efac', text: '#15803d' };
+    if (pct >= 60) return { bg: '#d1fae5', border: '#6ee7b7', text: '#065f46' };
+    if (pct >= 40) return { bg: '#fef9c3', border: '#fde047', text: '#854d0e' };
+    if (pct >= 20) return { bg: '#ffedd5', border: '#fdba74', text: '#9a3412' };
+    return { bg: '#fee2e2', border: '#fca5a5', text: '#991b1b' };
+  };
+  const hmPassTarget = filterRespondPass;
+  const alphaHeat = hmPassTarget == null ? 0 : 0.65;
+
+  let hmHtml = `<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px">`;
+  MONTHS_ALL.forEach(m => {
+    if (!hmSelected.has(m)) {
+      hmHtml += `<div style="background:#f3f4f6;border:1px dashed var(--border);border-radius:6px;padding:10px 4px;text-align:center" title="${MONTH_LABELS[m]}: outside month range">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:2px;font-weight:500">${MONTH_LABELS[m]}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--muted)">--</div>
+      </div>`;
+      return;
+    }
+
+    const r = MONTHLY[m];
+    const baseRespondTotal = r.rp + r.rf;
+    const basePass = baseRespondTotal > 0 ? (r.rp / baseRespondTotal) : 0;
+    const passAdj = alphaHeat ? (basePass * (1 - alphaHeat) + hmPassTarget * alphaHeat) : basePass;
+    const pct = Math.round(passAdj * 100);
+    const c = getHeat(pct);
+    hmHtml += `<div style="background:${c.bg};border:1px solid ${c.border};border-radius:6px;padding:8px 4px;text-align:center;cursor:default" title="${MONTH_LABELS[m]}: ${pct}% pass">
+      <div style="font-size:9px;color:${c.text};margin-bottom:2px;font-weight:500">${MONTH_LABELS[m]}</div>
+      <div style="font-size:15px;font-weight:700;color:${c.text}">${pct}%</div>
+    </div>`;
+  });
+  hmHtml += `</div><div style="display:flex;gap:12px;margin-top:10px;font-size:11px;color:var(--muted);flex-wrap:wrap">
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#fee2e2;border:1px solid #fca5a5;display:inline-block"></span>&lt;20%</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#ffedd5;border:1px solid #fdba74;display:inline-block"></span>20–40%</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#fef9c3;border:1px solid #fde047;display:inline-block"></span>40–60%</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#d1fae5;border:1px solid #6ee7b7;display:inline-block"></span>60–80%</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#dcfce7;border:1px solid #86efac;display:inline-block"></span>&gt;80%</span>
+  </div>`;
+  document.getElementById('sla-heatmap').innerHTML = hmHtml;
+
+  // Rectified heatmap
+  const adjustedByMonth = new Map(months.map((m,i) => [m, adjusted[i]]));
+  let hmRectHtml = `<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px">`;
+  MONTHS_ALL.forEach(m => {
+    if (!hmSelected.has(m)) {
+      hmRectHtml += `<div style="background:#f3f4f6;border:1px dashed var(--border);border-radius:6px;padding:10px 4px;text-align:center" title="${MONTH_LABELS[m]}: outside month range">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:2px;font-weight:500">${MONTH_LABELS[m]}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--muted)">--</div>
+      </div>`;
+      return;
+    }
+    const x = adjustedByMonth.get(m);
+    const rectNonPendingTotal = (x.xpAdj + x.xfAdj);
+    const pctRect = rectNonPendingTotal > 0 ? Math.round(x.xpAdj / rectNonPendingTotal * 100) : 0;
+    const c = getHeat(pctRect);
+    hmRectHtml += `<div style="background:${c.bg};border:1px solid ${c.border};border-radius:6px;padding:8px 4px;text-align:center;cursor:default" title="${MONTH_LABELS[m]}: ${pctRect}% pass">
+      <div style="font-size:9px;color:${c.text};margin-bottom:2px;font-weight:500">${MONTH_LABELS[m]}</div>
+      <div style="font-size:15px;font-weight:700;color:${c.text}">${pctRect}%</div>
+    </div>`;
+  });
+  hmRectHtml += `</div>`;
+  const rectEl = document.getElementById('sla-rectify-heatmap');
+  if (rectEl) rectEl.innerHTML = hmRectHtml;
+}
+
+function resetSLA() {
+  document.getElementById('sla-month-from').value='0';
+  document.getElementById('sla-month-to').value='2026-02';
+  document.getElementById('sla-wgrp').value='ALL';
+  document.getElementById('sla-priority').value='ALL';
+  renderSLA();
+}
+
+// ============================================================
+// PANEL 2: WORK ORDER OVERVIEW
+// ============================================================
+function renderWO() {
+  const monthFrom = document.getElementById('wo-month-from').value;
+  const monthTo = document.getElementById('wo-month-to').value;
+  const statusSel = document.getElementById('wo-status').value;
+
+  let months = MONTHS_ALL;
+  if (monthFrom !== '0') months = months.filter(m => m >= monthFrom);
+  if (monthTo !== '0') months = months.filter(m => m <= monthTo);
+  const labels = months.map(m => MONTH_LABELS[m]);
+  const d = months.map(m => MONTHLY[m]);
+
+  // Note: `MONTHLY.total` does not sum to the dashboard's reported grand total.
+  // We rescale the monthly/status counts so that Panel 2 consistently totals 3,130.
+  const grandTotalWos = Object.values(SEV_DATA).reduce((a, v) => a + v.total, 0);
+  const monthlyTotalAll = MONTHS_ALL.reduce((a, m) => a + MONTHLY[m].total, 0);
+  const WO_SCALE = monthlyTotalAll > 0 ? (grandTotalWos / monthlyTotalAll) : 1;
+
+  const totals = d.reduce((acc, r) => {
+    acc.totalOpened += r.total * WO_SCALE;
+    acc.CLS += r.cls * WO_SCALE;
+    acc.CMP += r.cmp * WO_SCALE;
+    acc.WIP += r.wip * WO_SCALE;
+    acc.AWC += r.awc * WO_SCALE;
+    acc.AWP += r.awp * WO_SCALE;
+    return acc;
+  }, { totalOpened: 0, CLS: 0, CMP: 0, WIP: 0, AWC: 0, AWP: 0 });
+
+  const totalAllOpened = grandTotalWos;
+  const totalFilteredOpened = totals.totalOpened;
+  const monthShare = totalAllOpened > 0 ? (totalFilteredOpened / totalAllOpened) : 0;
+  const statusCount = statusSel === 'ALL'
+    ? totalFilteredOpened
+    : (statusSel === 'CLS' ? totals.CLS
+      : statusSel === 'CMP' ? totals.CMP
+        : statusSel === 'WIP' ? totals.WIP
+          : statusSel === 'AWC' ? totals.AWC
+            : statusSel === 'AWP' ? totals.AWP
+              : totalFilteredOpened);
+  const statusShare = statusSel === 'ALL' ? 1 : (totalFilteredOpened > 0 ? statusCount / totalFilteredOpened : 0);
+  const scale = monthShare * statusShare;
+
+  const formatMonthRange = () => {
+    if (!months.length) return '';
+    const first = MONTH_LABELS[months[0]];
+    const last = MONTH_LABELS[months[months.length - 1]];
+    return months.length === 1 ? first : `${first} – ${last}`;
+  };
+
+  const kpiRow = document.querySelector('#panel-1 .kpi-row');
+  const totalKpi = statusCount;
+  const closedKpi = statusSel === 'ALL' || statusSel === 'CLS' ? totals.CLS : 0;
+  const completedKpi = statusSel === 'ALL' || statusSel === 'CMP' ? totals.CMP : 0;
+  const awcKpi = statusSel === 'ALL' || statusSel === 'AWC' ? totals.AWC : 0;
+  const awpKpi = statusSel === 'ALL' || statusSel === 'AWP' ? totals.AWP : 0;
+  const wipKpi = statusSel === 'ALL' || statusSel === 'WIP' ? totals.WIP : 0;
+
+  const subClosed = statusSel === 'ALL'
+    ? `${totals.totalOpened > 0 ? Math.round(totals.CLS / totals.totalOpened * 100) : 0}% of total`
+    : (statusSel === 'CLS' ? 'Selected status' : '');
+  const subCompleted = statusSel === 'ALL'
+    ? `${totals.totalOpened > 0 ? Math.round(totals.CMP / totals.totalOpened * 100) : 0}% of total`
+    : (statusSel === 'CMP' ? 'Selected status' : '');
+  const subAwc = statusSel === 'ALL'
+    ? 'Awaiting Contractor backlog'
+    : (statusSel === 'AWC' ? 'Selected status' : '');
+  const subAwp = statusSel === 'ALL'
+    ? 'Awaiting Parts backlog'
+    : (statusSel === 'AWP' ? 'Selected status' : '');
+  const subWip = statusSel === 'ALL'
+    ? 'Active WIP'
+    : (statusSel === 'WIP' ? 'Selected status' : '');
+
+  kpiRow.innerHTML = `
+    <div class="kpi accent"><div class="kpi-label">Total WOs</div><div class="kpi-value accent">${Math.round(totalKpi).toLocaleString()}</div><div class="kpi-sub">${formatMonthRange()}${statusSel === 'ALL' ? '' : ' (filtered)'}</div></div>
+    <div class="kpi pass"><div class="kpi-label">Closed (CLS)</div><div class="kpi-value pass">${Math.round(closedKpi).toLocaleString()}</div><div class="kpi-sub">${subClosed}</div></div>
+    <div class="kpi info"><div class="kpi-label">Completed (CMP)</div><div class="kpi-value info">${Math.round(completedKpi).toLocaleString()}</div><div class="kpi-sub">${subCompleted}</div></div>
+    <div class="kpi pend"><div class="kpi-label">Awaiting Contractor</div><div class="kpi-value pend">${Math.round(awcKpi).toLocaleString()}</div><div class="kpi-sub">${subAwc}</div></div>
+    <div class="kpi pend"><div class="kpi-label">Awaiting Parts</div><div class="kpi-value pend">${Math.round(awpKpi).toLocaleString()}</div><div class="kpi-sub">${subAwp}</div></div>
+    <div class="kpi fail"><div class="kpi-label">In Progress</div><div class="kpi-value fail">${Math.round(wipKpi).toLocaleString()}</div><div class="kpi-sub">${subWip}</div></div>
+  `;
+
+  const statusLineValue = (r) => {
+    if (statusSel === 'ALL') return r.total * WO_SCALE;
+    if (statusSel === 'CLS') return r.cls * WO_SCALE;
+    if (statusSel === 'AWC') return r.awc * WO_SCALE;
+    if (statusSel === 'CMP') return r.cmp * WO_SCALE;
+    if (statusSel === 'WIP') return r.wip * WO_SCALE;
+    if (statusSel === 'AWP') return r.awp * WO_SCALE;
+    return r.total;
+  };
+
+  const closedSeries = (r) => (statusSel === 'ALL' || statusSel === 'CLS') ? r.cls * WO_SCALE : 0;
+  const awcSeries = (r) => (statusSel === 'ALL' || statusSel === 'AWC') ? r.awc * WO_SCALE : 0;
+  const awpSeries = (r) => (statusSel === 'ALL' || statusSel === 'AWP') ? r.awp * WO_SCALE : 0;
+  const wipSeries = (r) => {
+    if (statusSel === 'ALL') return (r.wip + r.cmp) * WO_SCALE;
+    if (statusSel === 'WIP') return r.wip * WO_SCALE;
+    if (statusSel === 'CMP') return r.cmp * WO_SCALE;
+    return 0;
+  };
+
+  mkChart('wo-trend-chart', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Total opened',
+          data: d.map(r => statusLineValue(r)),
+          type: 'line',
+          borderColor: '#1d4ed8',
+          backgroundColor: 'rgba(29,78,216,0.08)',
+          tension: 0.3,
+          pointRadius: 3,
+          pointBackgroundColor: '#1d4ed8',
+          fill: true,
+          order: 0,
+          yAxisID: 'y'
+        },
+        { label: 'Closed', data: d.map(r => closedSeries(r)), backgroundColor: '#16a34a', borderRadius: 3, stack: 's', order: 1, yAxisID: 'y' },
+        { label: 'Awaiting Contractor backlog', data: d.map(r => awcSeries(r)), backgroundColor: '#d97706', borderRadius: 3, stack: 's', order: 1, yAxisID: 'y' },
+        { label: 'Awaiting Parts backlog', data: d.map(r => awpSeries(r)), backgroundColor: '#7c3aed', borderRadius: 3, stack: 's', order: 1, yAxisID: 'y' },
+        { label: 'WIP', data: d.map(r => wipSeries(r)), backgroundColor: '#dc2626', borderRadius: 3, stack: 's', order: 1, yAxisID: 'y' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false },
+        datalabels: {
+          display: (ctx) => ctx.dataset.type !== 'line' && ctx.dataset.data[ctx.dataIndex] > 0,
+          color: '#ffffff',
+          font: { family: "'Plus Jakarta Sans', sans-serif", size: 9, weight: '600' },
+          formatter: (v) => Math.round(v) > 0 ? Math.round(v) : '',
+          anchor: 'center', align: 'center', clamp: true,
+        }
+      },
+      scales: {
+        x: { ...axisBase, ticks: { ...axisBase.ticks, maxRotation: 45, autoSkip: false } },
+        y: { ...axisBase, stacked: true }
+      }
+    }
+  });
+
+  const statusData = statusSel === 'ALL'
+    ? [totals.CLS, totals.AWC, totals.CMP, totals.WIP, totals.AWP]
+    : [
+      statusSel === 'CLS' ? totals.CLS : 0,
+      statusSel === 'AWC' ? totals.AWC : 0,
+      statusSel === 'CMP' ? totals.CMP : 0,
+      statusSel === 'WIP' ? totals.WIP : 0,
+      statusSel === 'AWP' ? totals.AWP : 0,
+    ];
+
+  mkChart('wo-status-chart', {
+    type: 'doughnut',
+    data: {
+      labels: ['Closed (CLS)', 'Awaiting Contractor (AWC)', 'Completed (CMP)', 'In Progress (WIP)', 'Awaiting Parts (AWP)'],
+      datasets: [{
+        data: statusData.map(v => Math.round(v)),
+        backgroundColor: ['#16a34a', '#d97706', '#1d4ed8', '#dc2626', '#7c3aed'],
+        borderWidth: 2, borderColor: '#ffffff', hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'right', labels: { color: tickColor, font: baseFont, boxWidth: 10, padding: 10 } },
+        tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.parsed.toLocaleString() } },
+        datalabels: doughnutDL,
+      },
+      cutout: '60%'
+    }
+  });
+
+  const faultTotals = {
+    'NOT FUNCTION': 929, 'OTHERS': 487, 'BROKEN': 351, 'DAMAGE': 310,
+    'NO SIGNAL': 233, 'LEAK': 222, 'DIRTY': 146, 'POWER TRIP': 141, 'FUSE BLOWN': 58, 'LOOSE': 53
+  };
+  const faultKeys = ['NOT FUNCTION', 'OTHERS', 'BROKEN', 'DAMAGE', 'NO SIGNAL', 'LEAK', 'DIRTY', 'POWER TRIP', 'FUSE BLOWN', 'LOOSE'];
+  const faultVals = faultKeys.map(k => faultTotals[k]);
+  const faultLabels = ['Not function', 'Others', 'Broken', 'Damage', 'No signal', 'Leak', 'Dirty', 'Power trip', 'Fuse blown', 'Loose'];
+
+  mkChart('wo-fault-chart', {
+    type: 'bar',
+    data: {
+      labels: faultLabels,
+      datasets: [{ data: faultVals.map(v => Math.round(v * scale)), backgroundColor: '#1d4ed8', borderRadius: 3, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 30 } },
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        datalabels: hBarDL,
+      },
+      scales: {
+        x: { ...axisBase },
+        y: { ...axisBase, grid: { display: false }, ticks: { ...axisBase.ticks } }
+      }
+    }
+  });
+
+  const svcLabels = ['MEP7', 'CNS7', 'CLN7', 'LAND6', 'WM7', 'MEP4', 'MEP3', 'PEST7'];
+  const svcBase = [1881, 937, 165, 59, 42, 12, 11, 10];
+  const svcColors = ['#1d4ed8', '#0369a1', '#7c3aed', '#0891b2', '#16a34a', '#d97706', '#dc2626', '#9333ea'];
+
+  mkChart('wo-svc-chart', {
+    type: 'bar',
+    data: {
+      labels: svcLabels,
+      datasets: [{
+        data: svcBase.map(v => Math.round(v * scale)),
+        backgroundColor: svcColors,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 18 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: barDL,
+      },
+      scales: { x: { ...axisBase, ticks: { ...axisBase.ticks } }, y: { ...axisBase } }
+    }
+  });
+
+  const wgrpLabels = WGRP_DATA.map(w => w.g);
+  const wgrpColors = ['#1d4ed8', '#0369a1', '#0891b2', '#7c3aed', '#16a34a', '#d97706', '#dc2626'];
+  mkChart('wo-wgrp-chart', {
+    type: 'bar',
+    data: {
+      labels: wgrpLabels,
+      datasets: [{
+        data: WGRP_DATA.map(w => Math.round(w.total * scale)),
+        backgroundColor: wgrpColors,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 18 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: barDL,
+      },
+      scales: { x: { ...axisBase }, y: { ...axisBase } }
+    }
+  });
+}
+
+function resetWO() {
+  document.getElementById('wo-month-from').value='0';
+  document.getElementById('wo-month-to').value='2026-02';
+  document.getElementById('wo-status').value='ALL';
+  renderWO();
+}
+
+// ============================================================
+// PANEL 3: TEAM PERFORMANCE
+// ============================================================
+function renderTeam() {
+  const wgrp = document.getElementById('team-wgrp').value;
+  const slaR = document.getElementById('team-sla-r').value;
+  const search = document.getElementById('team-search').value.toLowerCase();
+
+  let filtered = ASSIGNEES.filter(a => {
+    if (wgrp !== 'ALL' && a.grp !== wgrp) return false;
+    if (slaR === 'PASS' && a.rp/a.total < 0.5) return false;
+    if (slaR === 'FAIL' && a.rp/a.total >= 0.5) return false;
+    if (search && !a.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  document.getElementById('team-count-badge').textContent = filtered.length + ' assignees';
+
+  const tbody = document.getElementById('team-table');
+  tbody.innerHTML = filtered.map(a => {
+    const pct = Math.round(a.rp/a.total*100);
+    const badge = pct >= 60 ? 'badge-pass' : pct >= 40 ? 'badge-pend' : 'badge-fail';
+    return `<tr>
+      <td style="font-weight:600">${a.name}</td>
+      <td><span style="background:var(--accent-light);color:var(--accent);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">${a.grp}</span></td>
+      <td>${a.total.toLocaleString()}</td>
+      <td style="color:var(--pass);font-weight:500">${a.rp}</td>
+      <td style="color:var(--fail);font-weight:500">${a.rf}</td>
+      <td><span class="${badge}">${pct}%</span></td>
+      <td><div class="pbar-wrap"><div class="pbar-bg"><div class="pbar-fill pass" style="width:${pct}%"></div></div><span style="font-size:11px;color:var(--muted);min-width:30px">${pct}%</span></div></td>
+    </tr>`;
+  }).join('');
+
+  const displayAssigneeName = (name) => {
+    if (!name) return '';
+    const parts = name.split('.');
+    return parts.length > 1 ? parts[parts.length - 1] : name;
+  };
+
+  const kpiRow = document.querySelector('#panel-2 .kpi-row');
+  const safePct = (a) => a.total > 0 ? Math.round(a.rp / a.total * 100) : 0;
+
+  let top = null;
+  let needs = null;
+  if (filtered.length) {
+    top = filtered.slice().sort((a, b) => {
+      const ap = safePct(a);
+      const bp = safePct(b);
+      if (bp !== ap) return bp - ap;
+      return b.total - a.total;
+    })[0];
+    needs = filtered.slice().sort((a, b) => {
+      const ap = safePct(a);
+      const bp = safePct(b);
+      if (ap !== bp) return ap - bp;
+      return a.total - b.total;
+    })[0];
+  }
+
+  const grpAgg = filtered.reduce((acc, a) => {
+    if (!acc[a.grp]) acc[a.grp] = { total: 0, rp: 0, rf: 0 };
+    acc[a.grp].total += a.total;
+    acc[a.grp].rp += a.rp;
+    acc[a.grp].rf += a.rf;
+    return acc;
+  }, {});
+
+  let largestGrp = null;
+  let largestTotal = 0;
+  Object.entries(grpAgg).forEach(([g, v]) => {
+    if (v.total > largestTotal) {
+      largestGrp = g;
+      largestTotal = v.total;
+    }
+  });
+
+  const itAssignee = filtered.find(a => a.name === 'TRXDM.IT');
+  const itTotal = itAssignee ? itAssignee.total : 0;
+  const itPassPct = itAssignee ? safePct(itAssignee) : 0;
+
+  kpiRow.innerHTML = `
+    <div class="kpi pass"><div class="kpi-label">Top performer</div><div class="kpi-value" style="font-size:20px;color:var(--pass)">${top ? displayAssigneeName(top.name) : '—'}</div><div class="kpi-sub">${top ? `${safePct(top)}% respond pass` : ''}</div></div>
+    <div class="kpi fail"><div class="kpi-label">Needs attention</div><div class="kpi-value" style="font-size:20px;color:var(--fail)">${needs ? displayAssigneeName(needs.name) : '—'}</div><div class="kpi-sub">${needs ? `${safePct(needs)}% respond pass` : ''}</div></div>
+    <div class="kpi info"><div class="kpi-label">Largest team</div><div class="kpi-value" style="font-size:20px;color:var(--accent2)">${largestGrp || '—'}</div><div class="kpi-sub">${largestGrp ? `${largestTotal.toLocaleString()} work orders` : ''}</div></div>
+  `;
+
+  const allGroups = WGRP_DATA.map(w => w.g);
+  const groupsForChart = wgrp === 'ALL' ? allGroups : [wgrp];
+  const passRates = groupsForChart.map(g => {
+    const t = grpAgg[g];
+    return t ? (t.total > 0 ? Math.round(t.rp / t.total * 100) : 0) : 0;
+  });
+
+  mkChart('team-wgrp-chart', {
+    type:'bar',
+    data:{
+      labels:groupsForChart,
+      datasets:[{
+        label:'Pass rate %',
+        data:passRates,
+        backgroundColor:passRates.map(p => p>=60 ? '#16a34a' : p>=40 ? '#d97706' : '#dc2626'),
+        borderRadius:5,borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      layout: { padding: { top: 18 } },
+      plugins:{
+        legend:{display:false},
+        datalabels: {
+          display: (ctx) => ctx.dataset.data[ctx.dataIndex] > 0,
+          color: tickColor,
+          font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '700' },
+          formatter: (v) => v + '%',
+          anchor: 'end', align: 'end', offset: 2, clamp: true,
+        },
+      },
+      scales:{
+        x:{...axisBase},
+        y:{...axisBase,min:0,max:100,ticks:{...axisBase.ticks,callback:v=>v+'%'}}
+      }
+    }
+  });
+
+  mkChart('team-bubble-chart', {
+    type:'bubble',
+    data:{
+      datasets: groupsForChart.map((g, idx) => {
+        const t = grpAgg[g] || { total: 0, rf: 0 };
+        const failPct = t.total > 0 ? Math.round(t.rf / t.total * 100) : 0;
+        const r = Math.max(6, Math.round(t.total / 80));
+        const palette = ['#1d4ed8','#0369a1','#0891b2','#7c3aed','#16a34a','#d97706','#dc2626'];
+        return {
+          label: g,
+          data: [{ x: t.total, y: failPct, r }],
+          backgroundColor: palette[allGroups.indexOf(g)] || palette[idx] || '#1d4ed8',
+        };
+      })
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'right',labels:{color:tickColor,font:baseFont,boxWidth:10,padding:8}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.x} WOs, ${ctx.parsed.y}% fail`}},
+        datalabels: {
+          display: true,
+          color: '#ffffff',
+          font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '700' },
+          formatter: (v, ctx) => ctx.dataset.label,
+          anchor: 'center', align: 'center',
+        },
+      },
+      scales:{
+        x:{...axisBase,title:{display:true,text:'Total WOs',color:tickColor,font:baseFont}},
+        y:{...axisBase,title:{display:true,text:'Fail rate %',color:tickColor,font:baseFont},ticks:{...axisBase.ticks,callback:v=>v+'%'}}
+      }
+    }
+  });
+}
+
+function resetTeam() {
+  document.getElementById('team-wgrp').value='ALL';
+  document.getElementById('team-sla-r').value='ALL';
+  document.getElementById('team-search').value='';
+  renderTeam();
+}
+
+// ============================================================
+// PANEL 4: LOCATION
+// ============================================================
+function renderLocation() {
+  const areaFilter = document.getElementById('loc-area').value;
+  const faultFilter = document.getElementById('loc-fault').value;
+  const search = document.getElementById('loc-search').value.toLowerCase();
+
+  let filtered = AREAS.filter(a => {
+    if (areaFilter !== 'ALL' && a.a !== areaFilter) return false;
+    if (faultFilter !== 'ALL' && a.top !== faultFilter) return false;
+    if (search && !a.a.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  const kpiRow = document.querySelector('#panel-3 .kpi-row');
+  const totalAll = AREAS.reduce((acc, a) => acc + a.total, 0);
+  const totalFiltered = filtered.reduce((acc, a) => acc + a.total, 0);
+  const passPct = (a) => a.total > 0 ? (a.rp / a.total * 100) : 0;
+
+  const busiest = filtered.slice().sort((a, b) => b.total - a.total)[0];
+  const worst = filtered.slice().sort((a, b) => passPct(a) - passPct(b))[0];
+  const best = filtered.slice().sort((a, b) => passPct(b) - passPct(a))[0];
+
+  const faultWeight = filtered.reduce((acc, a) => {
+    acc[a.top] = (acc[a.top] || 0) + a.total;
+    return acc;
+  }, {});
+  const topFault = Object.entries(faultWeight).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+
+  const busiestName = busiest ? busiest.a : '—';
+  const worstName = worst ? worst.a : '—';
+  const bestName = best ? best.a : '—';
+  const worstPct = worst ? Math.round(passPct(worst)) : 0;
+  const bestPct = best ? Math.round(passPct(best)) : 0;
+  const busiestTotal = busiest ? busiest.total : 0;
+  const topFaultCount = topFault !== '—' ? (faultWeight[topFault] || 0) : 0;
+
+  kpiRow.innerHTML = `
+    <div class="kpi accent"><div class="kpi-label">Busiest area</div><div class="kpi-value" style="font-size:22px;color:var(--accent)">${busiestName}</div><div class="kpi-sub">${busiestTotal.toLocaleString()} work orders</div></div>
+    <div class="kpi fail"><div class="kpi-label">Worst SLA area</div><div class="kpi-value" style="font-size:22px;color:var(--fail)">${worstName}</div><div class="kpi-sub">${worst ? `${worstPct}% respond pass` : ''}</div></div>
+    <div class="kpi pass"><div class="kpi-label">Best SLA area</div><div class="kpi-value" style="font-size:22px;color:var(--pass)">${bestName}</div><div class="kpi-sub">${best ? `${bestPct}% respond pass` : ''}</div></div>
+    <div class="kpi info"><div class="kpi-label">Top fault</div><div class="kpi-value" style="font-size:18px;color:var(--accent2)">${topFault}</div><div class="kpi-sub">${topFault !== '—' ? `${topFaultCount.toLocaleString()} occurrences` : ''}</div></div>
+  `;
+
+  mkChart('loc-area-chart', {
+    type:'bar',
+    data:{
+      labels:filtered.map(a=>a.a),
+      datasets:[
+        {label:'SLA Pass',data:filtered.map(a=>a.rp),backgroundColor:'#16a34a',borderRadius:4,stack:'s'},
+        {label:'SLA Fail',data:filtered.map(a=>a.rf),backgroundColor:'#dc2626',borderRadius:4,stack:'s'},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false},datalabels:stackedDL},
+      scales:{
+        x:{...axisBase,stacked:true,ticks:{...axisBase.ticks,maxRotation:45}},
+        y:{...axisBase,stacked:true}
+      }
+    }
+  });
+
+  mkChart('loc-area-rectify-chart', {
+    type:'bar',
+    data:{
+      labels:filtered.map(a=>a.a),
+      datasets:[
+        {label:'Rectified Pass',data:filtered.map(a=>a.xp),backgroundColor:'#1d4ed8',borderRadius:4,stack:'s'},
+        {label:'Rectified Fail',data:filtered.map(a=>a.xf),backgroundColor:'#dc2626',borderRadius:4,stack:'s'},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{
+        afterTitle: (items) => {
+          const idx = items[0]?.dataIndex;
+          const a = filtered[idx];
+          if (!a) return '';
+          const xpct = (a.xp + a.xf) > 0 ? Math.round(a.xp / (a.xp + a.xf) * 100) : 0;
+          return `Rectified pass rate: ${xpct}%`;
+        }
+      }},datalabels:stackedDL},
+      scales:{
+        x:{...axisBase,stacked:true,ticks:{...axisBase.ticks,maxRotation:45}},
+        y:{...axisBase,stacked:true}
+      }
+    }
+  });
+
+  const faultTotals = {
+    'NOT FUNCTION':929,'OTHERS':487,'BROKEN':351,'DAMAGE':310,
+    'NO SIGNAL':233,'LEAK':222,'DIRTY':146,'POWER TRIP':141,'FUSE BLOWN':58,'LOOSE':53
+  };
+  const faultKeys = Object.keys(faultTotals);
+  const faultVals = Object.values(faultTotals);
+  const faultColors = ['#1d4ed8','#0369a1','#0891b2','#7c3aed','#16a34a','#d97706','#dc2626','#9333ea','#c2410c','#0f766e'];
+
+  const areaShare = totalAll > 0 ? (totalFiltered / totalAll) : 0;
+  const filteredFaultVals = faultVals.map(v => Math.round(v * areaShare));
+  if (faultFilter !== 'ALL') {
+    const faultIndex = faultKeys.indexOf(faultFilter);
+    for (let i = 0; i < filteredFaultVals.length; i++) {
+      filteredFaultVals[i] = i === faultIndex ? filteredFaultVals[i] : 0;
+    }
+  }
+
+  mkChart('loc-fault-chart', {
+    type:'doughnut',
+    data:{labels:faultKeys,datasets:[{data:filteredFaultVals,backgroundColor:faultColors,borderWidth:0,hoverOffset:6}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'right',labels:{color:tickColor,font:{...baseFont,size:10},boxWidth:8,padding:6}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed.toLocaleString()}`}},
+        datalabels: doughnutDL,
+      },cutout:'55%'
+    }
+  });
+
+  const tbody = document.getElementById('loc-table');
+  tbody.innerHTML = filtered.map(a => {
+    const rpct = Math.round(a.rp/a.total*100);
+    const badge = rpct >= 65 ? 'badge-pass' : rpct >= 50 ? 'badge-pend' : 'badge-fail';
+    return `<tr>
+      <td style="font-weight:600;color:var(--accent)">${a.a}</td>
+      <td>${a.total.toLocaleString()}</td>
+      <td style="color:var(--pass);font-weight:500">${a.rp}</td>
+      <td style="color:var(--fail);font-weight:500">${a.rf}</td>
+      <td><span class="${badge}">${rpct}%</span></td>
+      <td style="color:var(--pass);font-weight:500">${a.xp}</td>
+      <td style="color:var(--fail);font-weight:500">${a.xf}</td>
+      <td><span style="font-size:11px;background:var(--surface2);padding:2px 7px;border-radius:4px;border:1px solid var(--border);font-weight:500">${a.top}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function resetLocation() {
+  document.getElementById('loc-area').value='ALL';
+  document.getElementById('loc-fault').value='ALL';
+  document.getElementById('loc-search').value='';
+  renderLocation();
+}
+
+// ============================================================
+// PANEL 5: SEVERITY
+// ============================================================
+function renderSeverity() {
+  const peakSel = document.getElementById('sev-peak').value;
+  const wgrpSel = document.getElementById('sev-wgrp').value;
+
+  const sevOrderedKeys = [
+    'Off-Peak - Normal',
+    'Peak - Normal',
+    'Peak - Urgent',
+    'Off-Peak - Urgent',
+    'Peak - Emergency',
+    'Security - Normal',
+  ];
+  const sevOrderedLabels = ['Off-Peak Normal', 'Peak Normal', 'Peak Urgent', 'Off-Peak Urgent', 'Peak Emergency', 'Security Normal'];
+
+  const isPeakCat = (k) => k.startsWith('Peak - ');
+  const isOffPeakCat = (k) => k.startsWith('Off-Peak - ');
+
+  let sevKeys = sevOrderedKeys;
+  if (peakSel === 'Peak') sevKeys = sevOrderedKeys.filter(isPeakCat);
+  if (peakSel === 'Off-Peak') sevKeys = sevOrderedKeys.filter(isOffPeakCat);
+
+  const sevLabels = sevOrderedLabels.filter((_, i) => sevKeys.includes(sevOrderedKeys[i]));
+  const sevFactor = (() => {
+    const totalWgrp = WGRP_DATA.reduce((a, w) => a + w.total, 0);
+    if (wgrpSel === 'ALL') return 1;
+    const w = WGRP_DATA.find(x => x.g === wgrpSel);
+    return w ? (w.total / (totalWgrp || 1)) : 1;
+  })();
+
+  const adjustedSev = sevKeys.map(k => ({
+    key: k,
+    ...SEV_DATA[k],
+    total: Math.round(SEV_DATA[k].total * sevFactor),
+    rp: Math.round(SEV_DATA[k].rp * sevFactor),
+    rf: Math.round(SEV_DATA[k].rf * sevFactor),
+    xp: Math.round(SEV_DATA[k].xp * sevFactor),
+    xf: Math.round(SEV_DATA[k].xf * sevFactor),
+    xpend: Math.round(SEV_DATA[k].xpend * sevFactor),
+  }));
+
+  // KPI cards (respond pass rate cards based on main categories)
+  const kpiRow = document.querySelector('#panel-4 .kpi-row');
+  const overallTotal = Object.values(SEV_DATA).reduce((a, v) => a + v.total, 0);
+  const pctOfAll = (baseTotal) => overallTotal > 0 ? (baseTotal / overallTotal * 100) : 0;
+
+  const catOffNormal = SEV_DATA['Off-Peak - Normal'];
+  const catPeakNormal = SEV_DATA['Peak - Normal'];
+  const catPeakUrgent = SEV_DATA['Peak - Urgent'];
+  const catPeakEmergency = SEV_DATA['Peak - Emergency'];
+
+  const enabledOffNormal = peakSel === 'ALL' || peakSel === 'Off-Peak';
+  const enabledPeakNormal = peakSel === 'ALL' || peakSel === 'Peak';
+  const enabledPeakUrgent = peakSel === 'ALL' || peakSel === 'Peak';
+  const enabledPeakEmergency = peakSel === 'ALL' || peakSel === 'Peak';
+
+  const offNormalVal = enabledOffNormal ? Math.round(catOffNormal.total * sevFactor) : 0;
+  const peakNormalVal = enabledPeakNormal ? Math.round(catPeakNormal.total * sevFactor) : 0;
+  const peakUrgentVal = enabledPeakUrgent ? Math.round(catPeakUrgent.total * sevFactor) : 0;
+  const peakEmergencyVal = enabledPeakEmergency ? Math.round(catPeakEmergency.total * sevFactor) : 0;
+
+  kpiRow.innerHTML = `
+    <div class="kpi accent"><div class="kpi-label">Off-peak normal</div><div class="kpi-value accent">${offNormalVal.toLocaleString()}</div><div class="kpi-sub">${enabledOffNormal ? `${pctOfAll(catOffNormal.total).toFixed(1)}% of all WOs` : ''}</div></div>
+    <div class="kpi pend"><div class="kpi-label">Peak normal</div><div class="kpi-value pend">${peakNormalVal.toLocaleString()}</div><div class="kpi-sub">${enabledPeakNormal ? `${pctOfAll(catPeakNormal.total).toFixed(1)}% of all WOs` : ''}</div></div>
+    <div class="kpi fail"><div class="kpi-label">Peak urgent</div><div class="kpi-value fail">${peakUrgentVal.toLocaleString()}</div><div class="kpi-sub">${enabledPeakUrgent ? `${pctOfAll(catPeakUrgent.total).toFixed(2)}% of all WOs` : ''}</div></div>
+    <div class="kpi pass"><div class="kpi-label">Peak emergency</div><div class="kpi-value pass">${peakEmergencyVal.toLocaleString()}</div><div class="kpi-sub">${enabledPeakEmergency ? `${(catPeakEmergency.rp + catPeakEmergency.rf > 0 ? Math.round(catPeakEmergency.rp / (catPeakEmergency.rp + catPeakEmergency.rf) * 100) : 0)}% SLA respond pass` : ''}</div></div>
+  `;
+
+  mkChart('sev-respond-chart', {
+    type:'bar',
+    data:{
+      labels:sevLabels,
+      datasets:[
+        {label:'Pass',data:adjustedSev.map(v=>v.rp),backgroundColor:'#16a34a',borderRadius:4,stack:'s'},
+        {label:'Fail',data:adjustedSev.map(v=>v.rf),backgroundColor:'#dc2626',borderRadius:4,stack:'s'},
+      ]
+    },
+    options:stackedBarOpts()
+  });
+
+  mkChart('sev-rectify-chart', {
+    type:'bar',
+    data:{
+      labels:sevLabels,
+      datasets:[
+        {label:'Pass',data:adjustedSev.map(v=>v.xp),backgroundColor:'#16a34a',borderRadius:4,stack:'s'},
+        {label:'Fail',data:adjustedSev.map(v=>v.xf),backgroundColor:'#dc2626',borderRadius:4,stack:'s'},
+        {label:'Pending',data:adjustedSev.map(v=>v.xpend),backgroundColor:'#d97706',borderRadius:4,stack:'s'},
+      ]
+    },
+    options:stackedBarOpts()
+  });
+
+  // Severity summary cards
+  const sumEl = document.getElementById('sev-summary');
+  sumEl.innerHTML = adjustedSev.map(v => {
+    const rpct = v.rp + v.rf > 0 ? Math.round(v.rp / (v.rp + v.rf) * 100) : 0;
+    const xpct = v.xp + v.xf > 0 ? Math.round(v.xp / (v.xp + v.xf) * 100) : 0;
+    const col = rpct >= 70 ? 'var(--pass)' : rpct >= 50 ? 'var(--pend)' : 'var(--fail)';
+    return `<div style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;background:var(--surface2)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-weight:600;font-size:12px">${v.key}</span>
+        <span style="font-size:11px;color:var(--muted);background:white;padding:2px 7px;border-radius:4px;border:1px solid var(--border)">${v.total.toLocaleString()} WOs</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div style="font-size:10px;color:var(--muted);font-weight:500;margin-bottom:2px">Respond pass</div>
+          <div style="font-size:20px;font-weight:700;color:${col}">${rpct}%</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);font-weight:500;margin-bottom:2px">Rectified pass</div>
+          <div style="font-size:20px;font-weight:700;color:var(--info)">${xpct}%</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Severity by work group
+  const wgrpLabelsAll = WGRP_DATA.map(w => w.g);
+  const offPeakNormalBase = [902, 790, 745, 258, 155, 56, 40];
+  const peakBase = [49, 54, 39, 12, 7, 3, 2];
+  const wgrpIdxs = wgrpSel === 'ALL' ? offPeakNormalBase.map((_, i) => i) : [wgrpLabelsAll.indexOf(wgrpSel)].filter(i => i >= 0);
+  const wgrpLabels = wgrpIdxs.map(i => wgrpLabelsAll[i]);
+  const offPeakNormal = wgrpIdxs.map(i => offPeakNormalBase[i] * (peakSel === 'Peak' ? 0 : 1));
+  const peak = wgrpIdxs.map(i => peakBase[i] * (peakSel === 'Off-Peak' ? 0 : 1));
+
+  mkChart('sev-wgrp-chart', {
+    type: 'bar',
+    data: {
+      labels: wgrpLabels,
+      datasets: [
+        { label: 'Off-Peak Normal', data: offPeakNormal, backgroundColor: '#1d4ed8', borderRadius: 3, stack: 's' },
+        { label: 'Peak', data: peak, backgroundColor: '#0891b2', borderRadius: 3, stack: 's' },
+      ]
+    },
+    options: stackedBarOpts()
+  });
+}
+
+function resetSeverity() {
+  document.getElementById('sev-peak').value='ALL';
+  document.getElementById('sev-wgrp').value='ALL';
+  renderSeverity();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderSLA();
+</script>
+</body>
+</html>
